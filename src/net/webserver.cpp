@@ -400,8 +400,8 @@ WebServer::WebServer(uint16_t port) : AsyncWebServer(port) {
         [](AsyncWebServerRequest* request, const String& filename, size_t index, uint8_t* data, size_t len, bool final) {
             if (index == 0) {
                 LOG.println("OTA web upload started: " + filename);
-                // Disable MQTT and other services during upload to free resources
                 size_t maxSize = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
+                Update.runAsync(true);  // Don't call yield() during flash writes (async context safe)
                 if (!Update.begin(maxSize)) {
                     LOG.println("OTA begin failed");
                     return;
