@@ -462,6 +462,8 @@ void pollForStatus(Device* d) {
             if (ds == ON && d->getBrightness() == 0)
                 d->setBrightness(BRIGHTNESS_MAX);
             g_mqtt->notifyBrightness(d);
+        } else if (d->getMode() == SHUTTER || d->getMode() == SHUTTER_BUS) {
+            g_mqtt->notifyCover(d);
         } else {
             g_mqtt->notifyPower(d);
         }
@@ -542,9 +544,21 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
     IrqManager::irqType = E2BP;
     g_bp->setDevice(d);
     switch (d->getMode()) {
-        case ON_OFF:
         case SHUTTER:
         case SHUTTER_BUS:
+            if (strcmp(mPayload, "OPEN") == 0) {
+                g_bp->on();
+                d->setStatus(ON);
+            } else if (strcmp(mPayload, "CLOSE") == 0) {
+                g_bp->off();
+                d->setStatus(OFF);
+            } else if (strcmp(mPayload, "STOP") == 0) {
+                g_bp->pauseShutter();
+                d->setStatus(PAUSE_SHUTTER);
+            }
+            g_mqtt->notifyCover(d);
+            break;
+        case ON_OFF:
         case NO_RCPT:
             if (strcmp(mPayload, "ON") == 0) {
                 g_bp->on();
