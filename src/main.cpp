@@ -457,14 +457,19 @@ void pollForStatus(Device* d) {
 
         // Update device status - even if unchanged
         // Hence, in case of hass restart, status are updated
-        d->setStatus(ds);
         if (d->getMode() == DIMMER) {
+            d->setStatus(ds);
             if (ds == ON && d->getBrightness() == 0)
                 d->setBrightness(BRIGHTNESS_MAX);
             g_mqtt->notifyBrightness(d);
         } else if (d->getMode() == SHUTTER || d->getMode() == SHUTTER_BUS) {
+            // For shutters, don't override status from polling.
+            // The RF status response doesn't reliably distinguish open/closed
+            // when the shutter is at rest. Keep the status set by the last
+            // command (OPEN/CLOSE/STOP) and just re-publish it for HA.
             g_mqtt->notifyCover(d);
         } else {
+            d->setStatus(ds);
             g_mqtt->notifyPower(d);
         }
     } else {
